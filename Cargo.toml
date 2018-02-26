@@ -1,0 +1,9 @@
+[package]
+name = "raytracer"
+version = "0.1.0"
+authors = ["Aymeric Beringer <aymeric.beringer@epita.fr>"]
+
+[dependencies]
+
+[profile.release]
+debug = true
