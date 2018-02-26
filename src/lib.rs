@@ -1,12 +1,13 @@
 pub mod vec3;
 pub mod solid;
 use vec3::*;
-use solid::Solid;
+use solid::{Solid, Object};
 use std::fs::File;
 use std::io::prelude::*;
 
 const MAX_DEPTH: i32 = 5;
 
+/*
 pub struct Sphere {
     pub center: Vec3<f64>,
     pub radius: f64,
@@ -24,10 +25,22 @@ impl Sphere {
             emission_color, transparency, reflection}
     }
 }
+*/
+
+pub struct Sphere {
+    pub center: Vec3<f64>,
+    pub radius: f64,
+    pub radius2: f64
+}
+
+impl Sphere {
+    pub fn new(center: Vec3<f64>, radius: f64) -> Self {
+        Sphere {center, radius, radius2: radius * radius}
+    }
+}
 
 impl Solid for Sphere {
     fn intersect(&self, org: Vec3<f64>, dir: Vec3<f64>) -> Option<f64> {
-        /*
         let l = self.center - org;
         let tca = l.dot(&dir);
         if tca < 0. {return None;};
@@ -41,7 +54,7 @@ impl Solid for Sphere {
         } else {
             if t0 < 0. {if t1 < 0. {None} else {Some(t1)}} else{Some(t0)}
         }
-        */
+        /*
         let l = org - self.center;
         match solve_quadratic(&Vec3::new(dir.dot(&dir), 2. * dir.dot(&l),
             l.dot(&l) - self.radius2)) {
@@ -56,12 +69,14 @@ impl Solid for Sphere {
                 }
             }
         }
+        */
     }
-
+    /*
     fn emission_color(&self) -> Vec3<f64> {self.emission_color}
     fn surface_color(&self) -> Vec3<f64> {self.surface_color}
     fn transparency(&self) -> f64 {self.transparency}
     fn reflection(&self) -> f64 {self.reflection}
+    */
     fn position(&self) -> Vec3<f64> {self.center}
 
     fn normal_at(&self, hit: Vec3<f64>) -> Vec3<f64> {
@@ -73,12 +88,12 @@ impl Solid for Sphere {
 
 fn mix(a: f64, b: f64, mix: f64) -> f64 {b * mix + a * (1. - mix)}
 
-pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Box<Solid>>, depth: i32) -> Vec3<f64> {
+pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) -> Vec3<f64> {
     let mut tnear = ::std::f64::MAX;
-    let mut obj: Option<&Box<Solid>> = None;
+    let mut obj: Option<&Object> = None;
 
     for object in objects {
-        let t = match object.intersect(org, dir) {
+        let t = match object.solid.intersect(org, dir) {
             Some(v) => v,
             None => {continue;}
         };
@@ -88,13 +103,13 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Box<Solid>>, depth: i
         }
     }
     let obj = match obj {
-        None => { return Vec3::new(0., 0., 0.); },
+        None => { return Vec3::new(0.5, 0.5, 0.5); },
         Some(o) => o
     };
 
     let mut surface_color: Vec3<f64> = Vec3::default();
     let phit = org + dir * tnear;
-    let mut nhit = obj.normal_at(phit);
+    let mut nhit = obj.solid.normal_at(phit);
 
     let bias = 1e-4f64;
     let inside = if dir.dot(&nhit) > 0. {
@@ -102,15 +117,15 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Box<Solid>>, depth: i
         true
     } else {false};
 
-    if (obj.transparency() > 0. || obj.reflection() > 0.) && depth < MAX_DEPTH {
+    if (obj.transparency > 0. || obj.reflection > 0.) && depth < MAX_DEPTH {
         let facingratio = -dir.dot(&nhit);
-        let fresneleffect = mix((1. - facingratio).powi(3), 1., 0.1);
+        let fresneleffect = mix((1. - facingratio).powi(3), 1., 0.4);
 
         let mut refldir = dir - nhit * 2. * dir.dot(&nhit);
         let reflection = trace(phit + nhit * bias, *refldir.normalize(), objects, depth + 1);
 
         let mut refraction = Vec3::default();
-        if obj.transparency() > 0. {
+        if obj.transparency > 0. {
             let ior = 1.1;
             let eta = if inside {ior} else {1. / ior};
             let cosi = -nhit.dot(&dir);
@@ -119,31 +134,33 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Box<Solid>>, depth: i
             let mut refrdir = dir * eta + nhit * (eta * cosi - k.sqrt());
             refraction = trace(phit - nhit * bias, *refrdir.normalize(), objects, depth + 1);
         }
-        surface_color = obj.surface_color() * ((reflection * fresneleffect) + refraction *
-            (1. - fresneleffect) * obj.transparency());
+        surface_color = obj.surface_color * (reflection * fresneleffect +
+                            refraction *(1. - fresneleffect) * obj.transparency);
     } else {
         for (i, o) in objects.iter().enumerate() {
-            if o.emission_color().x > 0. {
-                let mut transmission = Vec3::new(1., 1., 1.);
-                let mut light_direction = o.position() - phit;
+            if o.emission_color.x > 0. {
+                let mut light_direction = o.pos - phit;
+                let val = 1.5 - 1. / (1. + light_direction.len_sqr().exp2());
+                //let mut transmission = Vec3::new(1., 1., 1.);
+                let mut transmission = Vec3::new(val, val, val);
                 light_direction.normalize();
                 for (j, x) in objects.iter().enumerate() {
                     if i != j {
-                        match x.intersect(phit + nhit * bias, light_direction) {
+                        match x.solid.intersect(phit + nhit * bias, light_direction) {
                             Some(_) => {transmission = Vec3::default(); break;},
                             None => ()
                         }
                     }
                 }
-                surface_color = surface_color + obj.surface_color() * transmission *
-                    (nhit.dot(&light_direction).max(0.)) * o.emission_color();
+                surface_color = surface_color + obj.surface_color * transmission *
+                    (nhit.dot(&light_direction).max(0.)) * o.emission_color;
             }
         }
     }
-    surface_color + obj.emission_color()
+    surface_color + obj.emission_color
 }
 
-pub fn render(objects: &Vec<Box<Solid>>) {
+pub fn render(objects: &Vec<Object>) {
     let width = 1366;
     let height = 768;
     let mut image = vec![Vec3::default(); width * height];
