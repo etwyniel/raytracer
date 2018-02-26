@@ -1,3 +1,6 @@
+pub mod sphere;
+pub mod triangle;
+
 use super::vec3::{Vec3, solve_quadratic};
 
 pub struct Object {

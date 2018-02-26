@@ -1,7 +1,7 @@
 extern crate raytracer;
 use raytracer::vec3::*;
-use raytracer::Sphere;
-use raytracer::solid::{Solid, Object};
+use raytracer::solids::sphere::Sphere;
+use raytracer::solids::{Solid, Object};
 
 fn main() {
     /*
