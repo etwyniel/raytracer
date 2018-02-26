@@ -52,7 +52,7 @@ impl Solid for Sphere {
     */
     fn position(&self) -> Vec3<f64> {self.center}
 
-    fn normal_at(&self, hit: Vec3<f64>) -> Vec3<f64> {
+    fn normal_at(&self, hit: Vec3<f64>, _dir: Vec3<f64>) -> Vec3<f64> {
         let mut res = hit - self.center;
         res.normalize();
         res

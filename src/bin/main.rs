@@ -1,6 +1,7 @@
 extern crate raytracer;
 use raytracer::vec3::*;
 use raytracer::solids::sphere::Sphere;
+use raytracer::solids::triangle::Triangle;
 use raytracer::solids::{Solid, Object};
 
 fn main() {
@@ -32,7 +33,15 @@ fn main() {
         Object::new(Vec3::new(0.90, 0.90, 0.90), Vec3::default(), 1., 0.8,
             Box::new(Sphere::new(Vec3::new(-5.,     0., -15.),    3.))),
         Object::new(Vec3::new(0., 0., 0.), Vec3::new(5., 5., 5.), 1., 0.,
-            Box::new(Sphere::new(Vec3::new(0.,     20., -10.),    0.2, )))
+            Box::new(Sphere::new(Vec3::new(0.,     20., -10.),    0.2, ))),
+        Object::new(Vec3::new(0., 0., 0.), Vec3::new(2.5, 2., 2.), 1., 0.,
+            Box::new(Sphere::new(Vec3::new(0.,      0., 1.),    0.2, ))),
+        Object::new(Vec3::new(0.3, 0.9, 0.3), Vec3::default(), 0., 0.,
+            Box::new(Triangle::new(
+                        Vec3::new(5., -3.5, -15.),
+                        Vec3::new(-3., -3.5, -10.),
+                        Vec3::new(1., -3.5, -18.)
+                    )))
     ];
     raytracer::render(&spheres);
 }

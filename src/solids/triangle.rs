@@ -5,12 +5,17 @@ pub struct Triangle {
     pub p1: Vec3<f64>,
     pub p2: Vec3<f64>,
     pub u: Vec3<f64>,
-    pub v: Vec3<f64>
+    pub v: Vec3<f64>,
+    pub normal: Vec3<f64>
 }
 
 impl Triangle {
     pub fn new(p0: Vec3<f64>, p1: Vec3<f64>, p2: Vec3<f64>) -> Self {
-        Triangle{p0, p1, p2, u: p1 - p0, v: p2 - p0}
+        let u = p1 - p0;
+        let v = p2 - p0;
+        let mut normal = -u.cross(v);
+        normal.normalize();
+        Triangle{p0, p1, p2, u, v, normal}
     }
 }
 
@@ -18,9 +23,9 @@ impl Solid for Triangle {
     fn position(&self) -> Vec3<f64> {self.p0}
 
     fn intersect(&self, org: Vec3<f64>, dir: Vec3<f64>) -> Option<f64> {
-        let EPSILON = 1e-4f64;
+        let EPSILON = 1e-8f64;
 
-        let h = dir * self.v;
+        let h = dir.cross(self.v);
         let a = self.u.dot(&h);
         if a > -EPSILON && a < EPSILON {
             return None;
@@ -32,16 +37,24 @@ impl Solid for Triangle {
         if w < 0. || w > 1. {
             return None;
         }
-        let q = s * self.u;
+        let q = s.cross(self.u);
         let z = f * dir.dot(&q);
         if z < 0. || w + z > 1. {
             return None;
         }
         let t = f * self.v.dot(&q);
-        Some(t)
+        if t > EPSILON {
+            Some(t)
+        } else {
+            None
+        }
     }
 
-    fn normal_at(&self, p: Vec3<f64>) -> Vec3<f64> {
-        Vec3::default()
+    fn normal_at(&self, p: Vec3<f64>, dir: Vec3<f64>) -> Vec3<f64> {
+        if self.normal.dot(&dir) > 0. {
+            -self.normal
+        } else {
+            self.normal
+        }
     }
 }

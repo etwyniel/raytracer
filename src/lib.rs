@@ -25,15 +25,15 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
         }
     }
     let obj = match obj {
-        None => { return Vec3::new(0.5, 0.5, 0.5); },
+        None => { return Vec3::new(0.1, 0.3, 0.5); },
         Some(o) => o
     };
 
     let mut surface_color: Vec3<f64> = Vec3::default();
     let phit = org + dir * tnear;
-    let mut nhit = obj.solid.normal_at(phit);
+    let mut nhit = obj.solid.normal_at(phit, dir);
 
-    let bias = 1e-4f64;
+    let bias = 1e-1f64;
     let inside = if dir.dot(&nhit) > 0. {
         nhit = -nhit;
         true
@@ -62,7 +62,9 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
         for (i, o) in objects.iter().enumerate() {
             if o.emission_color.x > 0. {
                 let mut light_direction = o.pos - phit;
-                let val = 1.5 - 1. / (1. + light_direction.len_sqr().exp2());
+                //let val = 1.5 - 1. / (1. + (-light_direction.len_sqr()).exp2());
+                let dist2 = light_direction.len_sqr();
+                let val = 1. -  0.3 * dist2 / (1. + dist2.abs());
                 //let mut transmission = Vec3::new(1., 1., 1.);
                 let mut transmission = Vec3::new(val, val, val);
                 light_direction.normalize();
@@ -79,7 +81,11 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
             }
         }
     }
-    surface_color + obj.emission_color
+    let mut color = surface_color + obj.emission_color;
+    let intensity = color.len().min(1.);
+    color.normalize();
+    //surface_color * intensity + obj.emission_color
+    color * intensity
 }
 
 pub fn render(objects: &Vec<Object>) {
@@ -89,7 +95,7 @@ pub fn render(objects: &Vec<Object>) {
     //let mut pixel = &image[..];
     let inv_width = 1. / (width as f64);
     let inv_height = 1. / (height as f64);
-    let fov = 30.;
+    let fov = 40.;
     let aspect_ratio = width as f64 * inv_height;
     let angle = (::std::f64::consts::PI * 0.5 * fov / 180.).tan();
 
