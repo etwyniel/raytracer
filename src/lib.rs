@@ -26,6 +26,7 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
         }
     }
     let obj = match obj {
+        // Making the background a gradient instead of a solid color
         None => { let mut c =  Vec3::new(0.1, 0.3, 0.5) *
                             dir.dot(&Vec3::new(0., 0., -1.)).powi(2);
                   let intensity = c.len();
@@ -66,11 +67,13 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
         for (i, o) in objects.iter().enumerate() {
             if o.emission_color.x > 0. {
                 let mut light_direction = o.pos - phit;
-                //let val = 1.5 - 1. / (1. + (-light_direction.len_sqr()).exp2());
+
+                // Light fall-off with distance
                 let dist2 = light_direction.len_sqr();
                 let val = 1. -  0.3 * dist2 / (1. + dist2.abs());
                 //let mut transmission = Vec3::new(1., 1., 1.);
                 let mut transmission = Vec3::new(val, val, val);
+
                 light_direction.normalize();
                 for (j, x) in objects.iter().enumerate() {
                     if i != j {
@@ -97,7 +100,7 @@ pub fn render(width: usize, height: usize, objects: &Vec<Object>) {
     //let mut pixel = &image[..];
     let inv_width = 1. / (width as f64);
     let inv_height = 1. / (height as f64);
-    let fov = 40.;
+    let fov = 50.;
     let aspect_ratio = width as f64 * inv_height;
     let angle = (::std::f64::consts::PI * 0.5 * fov / 180.).tan();
 

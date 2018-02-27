@@ -37,9 +37,9 @@ impl Object {
     }
 
     pub fn from_file(path: &str) -> Result<Vec<Object>, String> {
-        let mut file = File::open(path).or_else(|e| Err(format!("Could not read file {}", path)))?;
+        let mut file = File::open(path).or_else(|_e| Err(format!("Could not read file {}", path)))?;
         let mut file_str = String::new();
-        file.read_to_string(&mut file_str).or_else(|e| Err(format!("Could not read file {}", path)))?;
+        file.read_to_string(&mut file_str).or_else(|_e| Err(format!("Could not read file {}", path)))?;
 
         let mut r = Vec::<Object>::new();
         
@@ -48,41 +48,32 @@ impl Object {
             if line.len() == 0 || line.starts_with("//") {
                 continue;
             }
-            let mut tokens = line.split(' ').collect::<Vec<&str>>();
-            if tokens.len() < 9 {
+            let mut tokens = line.split(", ").collect::<Vec<&str>>();
+            if tokens.len() < 5 {
                 return Err(format!("Invalid line: {}", i + 1));
             }
-            /*
-            let surface_color = html_color_to_vec3(
-                &tokens.next().ok_or(Error::new(ErrorKind::Other, "Invalid input file."))?)
-                .or_else(|_| Err(Error::new(ErrorKind::Other,
-                &format!("Invalid color: line {}", i + 1)[..])))?;
-            let emission_color = html_color_to_vec3(
-                &tokens.next().ok_or(Error::new(ErrorKind::Other, "Invalid input file."))?)
-                .or_else(|_| Err(Error::new(ErrorKind::Other,
-                &format!("Invalid color: line {}", i + 1)[..])))?;
-                */
-            let surface_color = Vec3::from_str(&tokens[0..3].join(" "))
+
+            let surface_color = Vec3::from_str(tokens[0])
                 .or_else(|_| Err(format!("Invalid reflection value: line {}", i + 1)))? * (1. / 255.);
-            let emission_color = Vec3::from_str(&tokens[3..6].join(" "))
+            let emission_color = Vec3::from_str(tokens[1])
                 .or_else(|_| Err(format!("Invalid reflection value: line {}", i + 1)))? * (1. / 255.);
 
-            let reflection = f64::from_str(&tokens[6])
+            let reflection = f64::from_str(&tokens[2])
                 .or_else(|_| Err(format!("Invalid reflection value: line {}", i + 1)))?;
-            let transparency = f64::from_str(&tokens[7])
+            let transparency = f64::from_str(&tokens[3])
                 .or_else(|_| Err(format!("Invalid transparency value: line {}", i + 1)))?;
 
-            let solid: Box<Solid> = match tokens[8] {
+            let solid: Box<Solid> = match tokens[4] {
                 "sphere" => Box::new(sphere::Sphere::from_str(
-                        &tokens[9..].join(" ")).or_else(|_|
+                        &tokens[5..].join(", ")).or_else(|_|
                         Err(format!("Invalid sphere definition: line {}", i + 1)))?),
 
                 "triangle" => Box::new(triangle::Triangle::from_str(
-                        &tokens[9..].join(" ")).or_else(|_|
+                        &tokens[5..].join(", ")).or_else(|_|
                         Err(format!("Invalid triangle definition: line {}", i + 1)))?),
 
                 "rectangle" => Box::new(rectangle::Rectangle::from_str(
-                        &tokens[9..].join(" ")).or_else(|_|
+                        &tokens[5..].join(", ")).or_else(|_|
                         Err(format!("Invalid rectangle definition: line {}", i + 1)))?),
                 _ => {return Err("Invalid input file.".to_string());}
             };
