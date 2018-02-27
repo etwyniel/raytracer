@@ -39,6 +39,16 @@ impl Solid for Rectangle {
 impl FromStr for Rectangle {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self::new(Vec3::default(), Vec3::default(), Vec3::default(), Vec3::default())) 
+        let vectors = s.split(", ").collect::<Vec<&str>>();
+        
+        if vectors.len() != 4 {
+            return Err(());
+        }
+
+        let p0 = Vec3::from_str(vectors[0]).or_else(|_| Err(()))?;
+        let p1 = Vec3::from_str(vectors[1]).or_else(|_| Err(()))?;
+        let p2 = Vec3::from_str(vectors[2]).or_else(|_| Err(()))?;
+        let p3 = Vec3::from_str(vectors[3]).or_else(|_| Err(()))?;
+        Ok(Self::new(p0, p1, p2, p3)) 
     }
 }
