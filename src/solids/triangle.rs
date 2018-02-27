@@ -23,11 +23,11 @@ impl Solid for Triangle {
     fn position(&self) -> Vec3<f64> {self.p0}
 
     fn intersect(&self, org: Vec3<f64>, dir: Vec3<f64>) -> Option<f64> {
-        let EPSILON = 1e-8f64;
+        let epsilon = 1e-8f64;
 
         let h = dir.cross(self.v);
         let a = self.u.dot(&h);
-        if a > -EPSILON && a < EPSILON {
+        if a > -epsilon && a < epsilon {
             return None;
         }
         let f = 1. / a;
@@ -43,14 +43,14 @@ impl Solid for Triangle {
             return None;
         }
         let t = f * self.v.dot(&q);
-        if t > EPSILON {
+        if t > epsilon {
             Some(t)
         } else {
             None
         }
     }
 
-    fn normal_at(&self, p: Vec3<f64>, dir: Vec3<f64>) -> Vec3<f64> {
+    fn normal_at(&self, _p: Vec3<f64>, dir: Vec3<f64>) -> Vec3<f64> {
         if self.normal.dot(&dir) > 0. {
             -self.normal
         } else {

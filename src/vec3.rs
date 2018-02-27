@@ -63,6 +63,18 @@ impl Vec3<f64> {
                   self.z * rhs.x - self.x * rhs.z,
                   self.x * rhs.y - self.y * rhs.x)
     }
+
+    pub fn abs(&self) -> Self {
+        Vec3::new(self.x.abs(), self.y.abs(), self.z.abs())
+    }
+
+    pub fn powi(&self, i: i32) -> Self {
+        Vec3::new(self.x.powi(i), self.y.powi(i), self.z.powi(i))
+    }
+
+    pub fn powf(&self, f: f64) -> Self {
+        Vec3::new(self.x.powf(f), self.y.powf(f), self.z.powf(f))
+    }
 }
 
 impl<T, O> Neg for Vec3<T> where T: Neg<Output=O> {

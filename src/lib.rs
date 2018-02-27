@@ -1,10 +1,11 @@
+extern crate png;
 pub mod vec3;
 pub mod solids;
 use vec3::*;
-use solids::sphere::*;
-use solids::{Object, Solid};
+use solids::Object;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::BufWriter;
+use png::{Encoder, HasParameters, ColorType, BitDepth};
 
 const MAX_DEPTH: i32 = 5;
 
@@ -25,7 +26,10 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
         }
     }
     let obj = match obj {
-        None => { return Vec3::new(0.1, 0.3, 0.5); },
+        None => { let mut c =  Vec3::new(0.1, 0.3, 0.5) *
+                            dir.dot(&Vec3::new(0., 0., -1.)).powi(2);
+                  let intensity = c.len();
+                  return *c.normalize() * intensity;},
         Some(o) => o
     };
 
@@ -33,7 +37,7 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
     let phit = org + dir * tnear;
     let mut nhit = obj.solid.normal_at(phit, dir);
 
-    let bias = 1e-1f64;
+    let bias = 1e-4f64;
     let inside = if dir.dot(&nhit) > 0. {
         nhit = -nhit;
         true
@@ -88,10 +92,8 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
     color * intensity
 }
 
-pub fn render(objects: &Vec<Object>) {
-    let width = 1366;
-    let height = 768;
-    let mut image = vec![Vec3::default(); width * height];
+pub fn render(width: usize, height: usize, objects: &Vec<Object>) {
+    let mut img = vec![Vec3::default(); width * height];
     //let mut pixel = &image[..];
     let inv_width = 1. / (width as f64);
     let inv_height = 1. / (height as f64);
@@ -106,16 +108,32 @@ pub fn render(objects: &Vec<Object>) {
             let xx = (2. * ((x as f64 + 0.5) * inv_width) - 1.) * angle * aspect_ratio;
             let mut dir = Vec3::new(xx, yy, -1.);
             dir.normalize();
-            image[line + x] = trace(Vec3::default(), dir, objects, 0);
+            img[line + x] = trace(Vec3::default(), dir, objects, 0);
         }
     }
 
+    /*
     let mut file = File::create("out.ppm").unwrap();
-    file.write_all(format!("P6\n{} {}\n255\n", width, height).as_bytes());
+    file.write_all(format!("P6\n{} {}\n255\n", width, height).as_bytes()).expect("Error\
+        writing to file.");
     for i in 0..(width * height) {
         let p = &image[i];
         file.write_all(&vec![(p.x.min(1.) * 255.) as u8,
                             (p.y.min(1.) * 255.) as u8,
-                            (p.z.min(1.) * 255.) as u8]);
+                            (p.z.min(1.) * 255.) as u8]).expect("Error writing to file.");
     }
+    */
+    let mut bytes = Vec::with_capacity(width * height * 3);
+    for pix in img {
+        bytes.push((pix.x.min(1.) * 255.) as u8);
+        bytes.push((pix.y.min(1.) * 255.) as u8);
+        bytes.push((pix.z.min(1.) * 255.) as u8);
+        //bytes.push(255u8);
+    }
+    let file = File::create("out.png").unwrap();
+    let ref mut w = BufWriter::new(file);
+    let mut encoder = Encoder::new(w, width as u32, height as u32);
+    encoder.set(ColorType::RGB).set(BitDepth::Eight);
+    let mut writer = encoder.write_header().unwrap();
+    writer.write_image_data(&bytes).unwrap();
 }

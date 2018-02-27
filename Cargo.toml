@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Aymeric Beringer <aymeric.beringer@epita.fr>"]
 
 [dependencies]
+png = "0.11.0"
 
 [profile.release]
 debug = true

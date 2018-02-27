@@ -2,7 +2,7 @@ extern crate raytracer;
 use raytracer::vec3::*;
 use raytracer::solids::sphere::Sphere;
 use raytracer::solids::triangle::Triangle;
-use raytracer::solids::{Solid, Object};
+use raytracer::solids::Object;
 
 fn main() {
     /*
@@ -43,5 +43,5 @@ fn main() {
                         Vec3::new(1., -3.5, -18.)
                     )))
     ];
-    raytracer::render(&spheres);
+    raytracer::render(720, 360, &spheres);
 }
