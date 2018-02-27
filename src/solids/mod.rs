@@ -29,6 +29,25 @@ pub fn html_color_to_vec3(s: &str) -> Result<Vec3<f64>, ()> {
     Ok(Vec3::new(r, g, b))
 }
 
+fn to_single_whitespace(s: &str) -> String {
+    let mut out: String = String::with_capacity(s.len());
+    let chars = s.chars().collect::<Vec<char>>();
+    let mut i = 0;
+    while i < s.len() {
+        match chars[i] {
+            ' ' | '\t' => {
+                i += 1;
+                while i < s.len() && (chars[i] == ' ' || chars[i] == '\t') {
+                    i += 1;
+                }
+                out.push(' ');
+            }
+            c => {i += 1; out.push(c);}
+        }
+    }
+    out
+}
+
 impl Object {
     pub fn new(surface_color: Vec3<f64>, emission_color: Vec3<f64>,
                transparency: f64, reflection: f64, solid: Box<Solid>) -> Self {
@@ -41,6 +60,11 @@ impl Object {
         let mut file_str = String::new();
         file.read_to_string(&mut file_str).or_else(|_e| Err(format!("Could not read file {}", path)))?;
 
+        Self::vec_from_str(&file_str)
+    }
+
+    pub fn vec_from_str(file_str: &str) -> Result<Vec<Object>, String> {
+        let file_str = &to_single_whitespace(file_str);
         let mut r = Vec::<Object>::new();
         
         for (i, line) in file_str.split('\n').enumerate() {
