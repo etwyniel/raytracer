@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use super::{Vec3, Solid};
 
 pub struct Sphere {
@@ -59,3 +60,13 @@ impl Solid for Sphere {
     }
 }
 
+impl FromStr for Sphere {
+    type Err = ();
+    fn from_str(s:  &str) -> Result<Self, Self::Err> {
+        let ind = s.rfind(' ').ok_or(())?;
+        let (center_str, radius_str) = s.split_at(ind);
+        let center = Vec3::from_str(center_str).or_else(|_| Err(()))?;
+        let radius = f64::from_str(radius_str.trim()).or_else(|_| Err(()))?;
+        Ok(Self::new(center, radius))
+    }
+}

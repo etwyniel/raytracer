@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use super::triangle::Triangle;
 use super::{Vec3, Solid};
 
@@ -32,5 +33,12 @@ impl Solid for Rectangle {
 
     fn normal_at(&self, hit: Vec3<f64>, dir: Vec3<f64>) -> Vec3<f64> {
         self.t0.normal_at(hit, dir)
+    }
+}
+
+impl FromStr for Rectangle {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::new(Vec3::default(), Vec3::default(), Vec3::default(), Vec3::default())) 
     }
 }

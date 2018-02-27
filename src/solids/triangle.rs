@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use super::{Vec3, Solid};
 
 pub struct Triangle {
@@ -56,5 +57,12 @@ impl Solid for Triangle {
         } else {
             self.normal
         }
+    }
+}
+
+impl FromStr for Triangle {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::new(Vec3::default(), Vec3::default(), Vec3::default())) 
     }
 }

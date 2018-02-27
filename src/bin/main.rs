@@ -21,6 +21,7 @@ fn main() {
             Vec3::new(8., 8., 8.), 1., 0.))];
     ];
             */
+    /*
     let spheres: Vec<Object> = vec![
         Object::new(Vec3::new(0.20, 0.20, 0.20), Vec3::new(0.1, 0.1, 0.1), 0., 0.,
             Box::new(Sphere::new(Vec3::new(0., -10004., -20.), 10000.))),
@@ -36,12 +37,13 @@ fn main() {
             Box::new(Sphere::new(Vec3::new(0.,     20., -10.),    0.2, ))),
         Object::new(Vec3::new(0., 0., 0.), Vec3::new(2.5, 2., 2.), 1., 0.,
             Box::new(Sphere::new(Vec3::new(0.,      0., 1.),    0.2, ))),
-        Object::new(Vec3::new(0.3, 0.9, 0.3), Vec3::default(), 0., 0.,
+        Object::new(Vec3::new(0.3, 0.9, 0.3), Vec3::default(), 1., 0.,
             Box::new(Triangle::new(
                         Vec3::new(5., -3.5, -15.),
                         Vec3::new(-3., -3.5, -10.),
                         Vec3::new(1., -3.5, -18.)
                     )))
-    ];
+    ];*/
+    let spheres = Object::from_file("in.rtcr").unwrap();
     raytracer::render(720, 360, &spheres);
 }

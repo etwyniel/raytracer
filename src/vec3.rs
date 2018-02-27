@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::ops::{Add, Sub, Mul, Neg};
 
 pub struct Vec3<T> {
@@ -21,6 +22,20 @@ impl Clone for Vec3<f64> {
         self.x = source.x;
         self.y = source.y;
         self.z = source.z;
+    }
+}
+
+impl FromStr for Vec3<f64> {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let tokens: Vec<&str> = s.split(' ').collect();
+        if tokens.len() != 3 {
+            return Err(());
+        }
+        let x = f64::from_str(tokens[0].trim()).or_else(|_| Err(()))?;
+        let y = f64::from_str(tokens[1].trim()).or_else(|_| Err(()))?;
+        let z = f64::from_str(tokens[2].trim()).or_else(|_| Err(()))?;
+        Ok(Vec3::new(x, y, z))
     }
 }
 
