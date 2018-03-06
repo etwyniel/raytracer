@@ -7,6 +7,7 @@ use std::str::FromStr;
 use std::fs::File;
 use std::io::prelude::*;
 use super::vec3::Vec3;
+use std::marker::Sync;
 
 pub struct Object {
     pub pos: Vec3<f64>,
@@ -14,7 +15,7 @@ pub struct Object {
     pub surface_color: Vec3<f64>,
     pub transparency: f64,
     pub reflection: f64,
-    pub solid: Box<Solid>
+    pub solid: Box<Solid + Sync>
 }
 
 pub fn html_color_to_vec3(s: &str) -> Result<Vec3<f64>, ()> {
@@ -50,15 +51,22 @@ fn to_single_whitespace(s: &str) -> String {
 
 impl Object {
     pub fn new(surface_color: Vec3<f64>, emission_color: Vec3<f64>,
-               transparency: f64, reflection: f64, solid: Box<Solid>) -> Self {
+               transparency: f64, reflection: f64, solid: Box<Solid + Sync>) -> Self {
         Object {pos: solid.position(), emission_color, surface_color,
             transparency, reflection, solid}
     }
 
     pub fn from_file(path: &str) -> Result<Vec<Object>, String> {
-        let mut file = File::open(path).or_else(|_e| Err(format!("Could not read file {}", path)))?;
         let mut file_str = String::new();
-        file.read_to_string(&mut file_str).or_else(|_e| Err(format!("Could not read file {}", path)))?;
+        if path == "-" {
+            ::std::io::stdin().read_to_string(&mut file_str).or_else(|_| 
+                Err(format!("Error reading from stdin.")))?;
+        } else {
+            let mut file = File::open(path).or_else(|_e|
+                Err(format!("Could not read file {}", path)))?;
+            file.read_to_string(&mut file_str).or_else(|_e|
+                Err(format!("Could not read file {}", path)))?;
+        }
 
         Self::vec_from_str(&file_str)
     }
@@ -87,7 +95,7 @@ impl Object {
             let transparency = f64::from_str(&tokens[3])
                 .or_else(|_| Err(format!("Invalid transparency value: line {}", i + 1)))?;
 
-            let solid: Box<Solid> = match tokens[4] {
+            let solid: Box<Solid + Sync> = match tokens[4] {
                 "sphere" => Box::new(sphere::Sphere::from_str(
                         &tokens[5..].join(", ")).or_else(|_|
                         Err(format!("Invalid sphere definition: line {}", i + 1)))?),
@@ -113,11 +121,4 @@ pub trait Solid {
     fn intersect(&self, origin: Vec3<f64>, direction: Vec3<f64>) -> Option<f64>;
     fn normal_at(&self, hit: Vec3<f64>, dir: Vec3<f64>) -> Vec3<f64>;
     fn position(&self) -> Vec3<f64>;
-    //fn from_str(&self) -> Result<Self>;
-    /*
-    fn surface_color(&self) -> Vec3<f64>;
-    fn emission_color(&self) -> Vec3<f64>;
-    fn transparency(&self) -> f64;
-    fn reflection(&self) -> f64;
-    */
 }

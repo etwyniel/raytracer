@@ -3,6 +3,7 @@ use raytracer::vec3::*;
 use raytracer::solids::sphere::Sphere;
 use raytracer::solids::triangle::Triangle;
 use raytracer::solids::Object;
+use std::env::args;
 
 fn main() {
     let default: Vec<Object> = vec![
@@ -27,7 +28,14 @@ fn main() {
                         Vec3::new(1., -3.5, -18.)
                     )))
     ];
-    //let spheres = Object::from_file("in.rtcr").unwrap_or(default);
-    let spheres = Object::from_file("in.rtcr").unwrap();
-    raytracer::render(720, 360, &spheres);
+    let mut spheres = default;
+    let mut out_name = "out.png".to_string();
+    let args = args().collect::<Vec<String>>();
+    if args.len() > 1 {
+        spheres = Object::from_file(&args[1]).unwrap();
+    }
+    if args.len() > 2 {
+        out_name = args[2].clone();
+    }
+    raytracer::render(1366, 768, &spheres, &out_name);
 }

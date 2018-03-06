@@ -5,6 +5,7 @@ authors = ["Aymeric Beringer <aymeric.beringer@epita.fr>"]
 
 [dependencies]
 png = "0.11.0"
+rayon = "1.0.0"
 
 [profile.release]
 debug = true

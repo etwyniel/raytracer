@@ -1,4 +1,6 @@
 extern crate png;
+extern crate rayon;
+
 pub mod vec3;
 pub mod solids;
 use vec3::*;
@@ -6,6 +8,7 @@ use solids::Object;
 use std::fs::File;
 use std::io::BufWriter;
 use png::{Encoder, HasParameters, ColorType, BitDepth};
+use rayon::prelude::*;
 
 const MAX_DEPTH: i32 = 5;
 
@@ -15,7 +18,7 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
     let mut tnear = ::std::f64::MAX;
     let mut obj: Option<&Object> = None;
 
-    for object in objects {
+    for object in objects.iter() {
         let t = match object.solid.intersect(org, dir) {
             Some(v) => v,
             None => {continue;}
@@ -46,12 +49,12 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
 
     if (obj.transparency > 0. || obj.reflection > 0.) && depth < MAX_DEPTH {
         let facingratio = -dir.dot(&nhit);
-        let fresneleffect = mix((1. - facingratio).powi(3), 1., 0.4);
+        let fresneleffect = mix((1. - facingratio).powi(3), 1., 0.1);
 
         let mut refldir = dir - nhit * 2. * dir.dot(&nhit);
         let reflection = trace(phit + nhit * bias, *refldir.normalize(), objects, depth + 1);
 
-        let mut refraction = Vec3::default();
+        let mut refraction = Vec3::<f64>::default();
         if obj.transparency > 0. {
             let ior = 1.1;
             let eta = if inside {ior} else {1. / ior};
@@ -61,7 +64,7 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
             let mut refrdir = dir * eta + nhit * (eta * cosi - k.sqrt());
             refraction = trace(phit - nhit * bias, *refrdir.normalize(), objects, depth + 1);
         }
-        surface_color = obj.surface_color * (reflection * fresneleffect +
+        surface_color = obj.surface_color * (reflection * fresneleffect * obj.reflection +
                             refraction *(1. - fresneleffect) * obj.transparency);
     } else {
         for (i, o) in objects.iter().enumerate() {
@@ -88,14 +91,19 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
             }
         }
     }
+    if surface_color.len_sqr() > 1. {
+        surface_color.normalize();
+    }
     let mut color = surface_color + obj.emission_color;
-    let intensity = color.len().min(1.);
-    color.normalize();
+    //let intensity = color.len().min(1.);
+    if color.len_sqr() > 1. {
+        color.normalize();
+    }
     //surface_color * intensity + obj.emission_color
-    color * intensity
+    color
 }
 
-pub fn render(width: usize, height: usize, objects: &Vec<Object>) {
+pub fn render(width: usize, height: usize, objects: &Vec<Object>, filename: &str) {
     let mut img = vec![Vec3::default(); width * height];
     //let mut pixel = &image[..];
     let inv_width = 1. / (width as f64);
@@ -103,7 +111,25 @@ pub fn render(width: usize, height: usize, objects: &Vec<Object>) {
     let fov = 50.;
     let aspect_ratio = width as f64 * inv_height;
     let angle = (::std::f64::consts::PI * 0.5 * fov / 180.).tan();
+    {
+        let mut rows: Vec<(usize, &mut [Vec3<f64>])> = 
+            img.chunks_mut(width)
+            .enumerate()
+            .collect();
 
+        rows.par_iter_mut()
+            .for_each(move |&mut (y, ref mut row)| {
+                  let yy = (1. - 2. * ((y as f64 + 0.5) * inv_height)) * angle;
+                  for x in 0..width {
+                      let xx = (2. * ((x as f64 + 0.5) * inv_width) - 1.) * angle * aspect_ratio;
+                      let mut dir = Vec3::new(xx, yy, -1.);
+                      dir.normalize();
+                      row[x] = trace(Vec3::default(), dir, &objects, 0);
+                  }
+            });
+    }
+    // Single threaded version
+    /*
     for y in 0..height {
         let line = y * width;
         let yy = (1. - 2. * ((y as f64 + 0.5) * inv_height)) * angle;
@@ -114,27 +140,19 @@ pub fn render(width: usize, height: usize, objects: &Vec<Object>) {
             img[line + x] = trace(Vec3::default(), dir, objects, 0);
         }
     }
-
-    /*
-    let mut file = File::create("out.ppm").unwrap();
-    file.write_all(format!("P6\n{} {}\n255\n", width, height).as_bytes()).expect("Error\
-        writing to file.");
-    for i in 0..(width * height) {
-        let p = &image[i];
-        file.write_all(&vec![(p.x.min(1.) * 255.) as u8,
-                            (p.y.min(1.) * 255.) as u8,
-                            (p.z.min(1.) * 255.) as u8]).expect("Error writing to file.");
-    }
     */
+
     let mut bytes = Vec::with_capacity(width * height * 3);
     for pix in img {
         bytes.push((pix.x.min(1.) * 255.) as u8);
         bytes.push((pix.y.min(1.) * 255.) as u8);
         bytes.push((pix.z.min(1.) * 255.) as u8);
-        //bytes.push(255u8);
     }
-    let file = File::create("out.png").unwrap();
-    let ref mut w = BufWriter::new(file);
+    let w: BufWriter<Box<::std::io::Write>> = match filename {
+        "-" => BufWriter::new(Box::new(::std::io::stdout())),
+        f => BufWriter::new(Box::new(File::create(f).unwrap()))
+    };
+
     let mut encoder = Encoder::new(w, width as u32, height as u32);
     encoder.set(ColorType::RGB).set(BitDepth::Eight);
     let mut writer = encoder.write_header().unwrap();
