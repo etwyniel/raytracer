@@ -130,18 +130,44 @@ pub fn render_wireframe(width: usize, height: usize, objects: &Vec<Object>, file
     let angle = (::std::f64::consts::PI * 0.5 * fov / 180.).tan();
 
     let mut hits = vec![-1; width * height];
+
+    // Doing first row
+    let yy = (1. - 2. * (0.5 * inv_height)) * angle;
+    for x in 0..width {
+        let xx = (2. * ((x as f64 + 0.5) * inv_width) - 1.) * angle * aspect_ratio;
+        let mut dir = Vec3::new(xx, yy, -1.);
+        dir.normalize();
+        
+        hits[x] = get_hit_object_id(Vec3::default(), dir, objects);
+    }
+
+    // Doing first column
+    let xx = (2. * (0.5 * inv_height) - 1.) * angle * aspect_ratio;
     for y in 0..height {
+        let yy = (1. - 2. * ((y as f64 + 0.5) * inv_height)) * angle;
+        let mut dir = Vec3::new(xx, yy, -1.);
+        dir.normalize();
+        
+        hits[width * y] = get_hit_object_id(Vec3::default(), dir, objects);
+    }
+
+    for y in 1..height {
         let line = y * width;
         let yy = (1. - 2. * ((y as f64 + 0.5) * inv_height)) * angle;
-        for x in 0..width {
+        for x in 1..width {
             let xx = (2. * ((x as f64 + 0.5) * inv_width) - 1.) * angle * aspect_ratio;
             let mut dir = Vec3::new(xx, yy, -1.);
             dir.normalize();
             
-            hits[line + x] = get_hit_object_id(Vec3::default(), dir, objects);
+            let val = get_hit_object_id(Vec3::default(), dir, objects);
+            hits[line + x] = val;
+            if val != hits[line + x - 1] || val != hits[line + x - width] {
+                img[line + x] = Vec3::new(1., 1., 1.);
+            }
         }
     }
 
+    /*
     for y in 1..height {
         let line = y * width;
         for x in 1..width {
@@ -153,6 +179,7 @@ pub fn render_wireframe(width: usize, height: usize, objects: &Vec<Object>, file
             };
         }
     }
+    */
 
     write_to_file(width, height, &img, filename).unwrap();
 }

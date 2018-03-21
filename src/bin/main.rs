@@ -6,14 +6,6 @@ use raytracer::solids::Object;
 use std::env::args;
 use std::process::exit;
 
-fn is_filename(s: &str) -> bool {
-    if s.len() > 1 && s.starts_with("-") {
-        false
-    } else {
-        true
-    }
-}
-
 fn main() {
     let default: Vec<Object> = vec![
         Object::new(Vec3::new(0.20, 0.20, 0.20), Vec3::new(0.1, 0.1, 0.1), 0., 0.,
@@ -38,10 +30,12 @@ fn main() {
                     )))
     ];
     let mut spheres = default;
+
     let mut out_name = "out.png".to_string();
     let mut width = 1280;
     let mut height = 720;
     let mut func: Box<fn(usize, usize, &Vec<Object>, &str)> = Box::new(raytracer::render);
+
     let mut names: Vec<String> = Vec::with_capacity(2);
     let mut ar = args().skip(1);
     loop {
