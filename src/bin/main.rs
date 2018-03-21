@@ -5,6 +5,14 @@ use raytracer::solids::triangle::Triangle;
 use raytracer::solids::Object;
 use std::env::args;
 
+fn is_filename(s: &str) -> bool {
+    if s.len() > 1 && s.starts_with("-") {
+        false
+    } else {
+        true
+    }
+}
+
 fn main() {
     let default: Vec<Object> = vec![
         Object::new(Vec3::new(0.20, 0.20, 0.20), Vec3::new(0.1, 0.1, 0.1), 0., 0.,
@@ -30,12 +38,16 @@ fn main() {
     ];
     let mut spheres = default;
     let mut out_name = "out.png".to_string();
-    let args = args().collect::<Vec<String>>();
-    if args.len() > 1 {
-        spheres = Object::from_file(&args[1]).unwrap();
+    let argv = args().collect::<Vec<String>>();
+    if argv.len() > 1 && is_filename(&argv[1]) {
+        spheres = Object::from_file(&argv[1]).unwrap();
     }
-    if args.len() > 2 {
-        out_name = args[2].clone();
+    if argv.len() > 2 && is_filename(&argv[2]) {
+        out_name = argv[2].clone();
     }
-    raytracer::render(1366, 768, &spheres, &out_name);
+    if argv.iter().any(|s| s == "-w") {
+        raytracer::render_wireframe(1280, 720, &spheres, &out_name);
+    } else {
+        raytracer::render(1280, 720, &spheres, &out_name);
+    }
 }

@@ -64,7 +64,7 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
             let mut refrdir = dir * eta + nhit * (eta * cosi - k.sqrt());
             refraction = trace(phit - nhit * bias, *refrdir.normalize(), objects, depth + 1);
         }
-        surface_color = obj.surface_color * (reflection * fresneleffect * obj.reflection +
+        surface_color = obj.surface_color * (reflection * fresneleffect +
                             refraction *(1. - fresneleffect) * obj.transparency);
     } else {
         for (i, o) in objects.iter().enumerate() {
@@ -91,9 +91,10 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
             }
         }
     }
+    /*
     if surface_color.len_sqr() > 1. {
         surface_color.normalize();
-    }
+    }*/
     let mut color = surface_color + obj.emission_color;
     //let intensity = color.len().min(1.);
     if color.len_sqr() > 1. {
@@ -101,6 +102,59 @@ pub fn trace(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>, depth: i32) 
     }
     //surface_color * intensity + obj.emission_color
     color
+}
+
+fn get_hit_object_id(org: Vec3<f64>, dir: Vec3<f64>, objects: &Vec<Object>) -> isize {
+    let mut tnear = ::std::f64::MAX;
+    let mut id = -1;
+    for (i, o) in objects.iter().enumerate() {
+        let t = match o.solid.intersect(org, dir) {
+            Some(v) => v,
+            None => {continue;}
+        };
+        if t < tnear {
+            tnear = t;
+            id = i as isize;
+        }
+    }
+
+    id
+}
+
+pub fn render_wireframe(width: usize, height: usize, objects: &Vec<Object>, filename: &str) {
+    let mut img = vec![Vec3::default(); width * height];
+    let inv_width = 1. / (width as f64);
+    let inv_height = 1. / (height as f64);
+    let fov = 50.;
+    let aspect_ratio = width as f64 * inv_height;
+    let angle = (::std::f64::consts::PI * 0.5 * fov / 180.).tan();
+
+    let mut hits = vec![-1; width * height];
+    for y in 0..height {
+        let line = y * width;
+        let yy = (1. - 2. * ((y as f64 + 0.5) * inv_height)) * angle;
+        for x in 0..width {
+            let xx = (2. * ((x as f64 + 0.5) * inv_width) - 1.) * angle * aspect_ratio;
+            let mut dir = Vec3::new(xx, yy, -1.);
+            dir.normalize();
+            
+            hits[line + x] = get_hit_object_id(Vec3::default(), dir, objects);
+        }
+    }
+
+    for y in 1..height {
+        let line = y * width;
+        for x in 1..width {
+            let cur = hits[line + x];
+            img[line + x] = if cur != hits[line + x - 1] || cur != hits[line + x - width] {
+                Vec3::new(1., 1., 1.)
+            } else {
+                Vec3::default()
+            };
+        }
+    }
+
+    write_to_file(width, height, &img, filename).unwrap();
 }
 
 pub fn render(width: usize, height: usize, objects: &Vec<Object>, filename: &str) {
@@ -142,19 +196,27 @@ pub fn render(width: usize, height: usize, objects: &Vec<Object>, filename: &str
     }
     */
 
+    write_to_file(width, height, &img, filename).unwrap();
+}
+
+fn write_to_file(width: usize, height: usize, img: &Vec<Vec3<f64>>, filename: &str) ->
+    Result<(), ()> {
+
     let mut bytes = Vec::with_capacity(width * height * 3);
+
     for pix in img {
         bytes.push((pix.x.min(1.) * 255.) as u8);
         bytes.push((pix.y.min(1.) * 255.) as u8);
         bytes.push((pix.z.min(1.) * 255.) as u8);
     }
+
     let w: BufWriter<Box<::std::io::Write>> = match filename {
         "-" => BufWriter::new(Box::new(::std::io::stdout())),
-        f => BufWriter::new(Box::new(File::create(f).unwrap()))
+        f => BufWriter::new(Box::new(File::create(f).or_else(|_| Err(()))?))
     };
 
     let mut encoder = Encoder::new(w, width as u32, height as u32);
     encoder.set(ColorType::RGB).set(BitDepth::Eight);
-    let mut writer = encoder.write_header().unwrap();
-    writer.write_image_data(&bytes).unwrap();
+    let mut writer = encoder.write_header().or_else(|_| Err(()) )?;
+    writer.write_image_data(&bytes).or_else(|_| Err(()))
 }

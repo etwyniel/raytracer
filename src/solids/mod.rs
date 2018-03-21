@@ -51,7 +51,7 @@ fn to_single_whitespace(s: &str) -> String {
 
 impl Object {
     pub fn new(surface_color: Vec3<f64>, emission_color: Vec3<f64>,
-               transparency: f64, reflection: f64, solid: Box<Solid + Sync>) -> Self {
+               reflection: f64, transparency: f64, solid: Box<Solid + Sync>) -> Self {
         Object {pos: solid.position(), emission_color, surface_color,
             transparency, reflection, solid}
     }
