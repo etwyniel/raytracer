@@ -4,6 +4,7 @@ use raytracer::solids::sphere::Sphere;
 use raytracer::solids::triangle::Triangle;
 use raytracer::solids::Object;
 use std::env::args;
+use std::process::exit;
 
 fn is_filename(s: &str) -> bool {
     if s.len() > 1 && s.starts_with("-") {
@@ -38,16 +39,78 @@ fn main() {
     ];
     let mut spheres = default;
     let mut out_name = "out.png".to_string();
-    let argv = args().collect::<Vec<String>>();
-    if argv.len() > 1 && is_filename(&argv[1]) {
-        spheres = Object::from_file(&argv[1]).unwrap();
+    let mut width = 1280;
+    let mut height = 720;
+    let mut func: Box<fn(usize, usize, &Vec<Object>, &str)> = Box::new(raytracer::render);
+    let mut names: Vec<String> = Vec::with_capacity(2);
+    let mut ar = args().skip(1);
+    loop {
+        match ar.next() {
+            None => {break;},
+
+            // stdin/stdout
+            Some(ref s) if s == "-" => {names.push(s.to_string());}
+
+            // Long option names
+            Some(ref s) if s.starts_with("--") => {
+                match &s[2..s.len()] {
+                    "wireframe" => {func = Box::new(raytracer::render_wireframe);}
+                    o => {eprintln!("Unknown option: --{}", o); exit(1);}
+                }
+            },
+
+            // Short option names
+            Some(ref s) if s.starts_with("-") => {
+                let mut flags = s.chars().skip(1);
+                let mut i = 1;
+                loop {
+                    i += 1;
+                    match flags.next() {
+                        None => {break;},
+                        Some('W') => {func = Box::new(raytracer::render_wireframe);},
+
+                        // Value in this arg or the next?
+                        Some(c) if c == 'w' || c == 'h' => {
+                            let sval = if i < s.len() {
+                                flags.collect::<String>()
+                            } else {
+                                match ar.next() {
+                                    Some(ref st) => st.clone(),
+                                    None => {eprintln!("Option -{} requires an argument", c);
+                                        exit(1);
+                                    }
+                                }
+                            };
+                            let val = match sval.parse::<usize>() {
+                                Ok(v) => v,
+                                _ => {eprintln!("Invalid value for option -{}", c); exit(1);}
+                            };
+                            match c {
+                                'w' => {width = val;},
+                                'h' => {height = val;}
+                                _ => {panic!();}
+                            }
+                            break;
+                        },
+                        Some(f) => {eprintln!("Unknown flag: -{}", f); exit(1);}
+                    }
+                }
+            },
+            Some(ref s) => {names.push(s.to_string());}
+        }
     }
-    if argv.len() > 2 && is_filename(&argv[2]) {
-        out_name = argv[2].clone();
+
+    if names.len() > 0 {
+        out_name = names[names.len() - 1].clone();
+
+
+        //TODO expand spheres with every input file
+        if names.len() > 1 {
+            spheres = match Object::from_file(&names[0]) {
+                Ok(o) => o,
+                Err(s) => {eprintln!("Error reading file: {}", s); exit(1);}
+            };
+        }
     }
-    if argv.iter().any(|s| s == "-w") {
-        raytracer::render_wireframe(1280, 720, &spheres, &out_name);
-    } else {
-        raytracer::render(1280, 720, &spheres, &out_name);
-    }
+    func(width, height, &spheres, &out_name);
 }
