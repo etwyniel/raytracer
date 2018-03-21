@@ -55,6 +55,21 @@ fn main() {
             Some(ref s) if s.starts_with("--") => {
                 match &s[2..s.len()] {
                     "wireframe" => {func = Box::new(raytracer::render_wireframe);}
+                    opt @ "width" | opt @ "height" => {
+                        let val = match ar.next() {
+                            None => {eprintln!("Option --{} requires a value", opt);
+                                exit(1);},
+                            Some(ref st) => match st.parse::<usize>() {
+                                Ok(v) => v,
+                                _ => {eprintln!("Invalid {} value", opt); exit(1);}
+                            }
+                        };
+                        match opt {
+                            "width" => {width = val;}
+                            "height" => {height = val;}
+                            _ => {panic!();}
+                        };
+                    },
                     o => {eprintln!("Unknown option: --{}", o); exit(1);}
                 }
             },
