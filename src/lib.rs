@@ -184,6 +184,14 @@ pub fn render_wireframe(width: usize, height: usize, objects: &Vec<Object>, file
     write_to_file(width, height, &img, filename).unwrap();
 }
 
+fn get_yy(y: usize, inv_height: f64, angle: f64) -> f64 {
+    (1. - 2. * ((y as f64 + 0.5) * inv_height)) * angle
+}
+
+fn get_xx(x: usize, inv_width: f64, angle: f64, aspect_ratio: f64) -> f64 {
+    (2. * ((x as f64 + 0.5) * inv_width) - 1.) * angle * aspect_ratio
+}
+
 pub fn render(width: usize, height: usize, objects: &Vec<Object>, filename: &str) {
     let mut img = vec![Vec3::default(); width * height];
     //let mut pixel = &image[..];
@@ -200,13 +208,29 @@ pub fn render(width: usize, height: usize, objects: &Vec<Object>, filename: &str
 
         rows.par_iter_mut()
             .for_each(move |&mut (y, ref mut row)| {
-                  let yy = (1. - 2. * ((y as f64 + 0.5) * inv_height)) * angle;
-                  for x in 0..width {
-                      let xx = (2. * ((x as f64 + 0.5) * inv_width) - 1.) * angle * aspect_ratio;
-                      let mut dir = Vec3::new(xx, yy, -1.);
-                      dir.normalize();
-                      row[x] = trace(Vec3::default(), dir, &objects, 0);
-                  }
+                let yy = get_yy(y, inv_height, angle);
+                let xx = (inv_width - 1.) * angle * aspect_ratio;
+                let mut dir = Vec3::new(xx, yy, -1.);
+                dir.normalize();
+                row[0] = trace(Vec3::default(), dir, &objects, 0);
+
+                for hx in 0..(width / 2 - 1) {
+                    let mut x = 2 * (hx + 1);
+                    let mut xx = get_xx(x, inv_width, angle, aspect_ratio);
+                    let mut dir = Vec3::new(xx, yy, -1.);
+                    dir.normalize();
+                    row[x] = trace(Vec3::default(), dir, &objects, 0);
+                    
+                    if (row[x - 2] - row[x]).len_sqr() > 0.5 {
+                        x -= 1;
+                        xx = get_xx(x, inv_width, angle, aspect_ratio);
+                        dir = Vec3::new(xx, yy, -1.);
+                        dir.normalize();
+                        row[x] = trace(Vec3::default(), dir, &objects, 0);
+                    } else {
+                        row[x - 1] = (row[x - 2] + row[x]) * 0.5;
+                    }
+              }
             });
     }
     // Single threaded version
