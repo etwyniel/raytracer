@@ -122,4 +122,6 @@ fn main() {
         }
     }
     func(width, height, &spheres, &out_name);
+
+    //raytracer::surface_test();
 }

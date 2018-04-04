@@ -1,8 +1,12 @@
 extern crate png;
 extern crate rayon;
+extern crate rand;
 
 pub mod vec3;
 pub mod solids;
+pub mod surface;
+
+use surface::*;
 use vec3::*;
 use solids::Object;
 use std::fs::File;
@@ -246,4 +250,19 @@ fn write_to_file(width: usize, height: usize, img: &Vec<Vec3<f64>>, filename: &s
     encoder.set(ColorType::RGB).set(BitDepth::Eight);
     let mut writer = encoder.write_header().or_else(|_| Err(()) )?;
     writer.write_image_data(&bytes).or_else(|_| Err(()))
+}
+
+pub fn surface_test() {
+    let w = 1920;
+    let h = 1080;
+    let mut img = vec![Vec3::<f64>::default(); w * h];
+    let s = NoiseSurface::new_seeded(Vec3::<f64>::new(1., 1., 1.), 9837502978);
+
+    for y in 0..h {
+        for x in 0..w {
+            img[y * w + x] = s.color_at(x as f64 / 48. - 20., y as f64 / 48.);
+        }
+    }
+
+    write_to_file(w, h, &img, "noise.png");
 }

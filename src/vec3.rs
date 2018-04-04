@@ -1,6 +1,35 @@
 use std::str::FromStr;
 use std::ops::{Add, Sub, Mul, Neg};
 
+pub trait Lerp {
+    fn lerp(&self, dst: Self, t: f64) -> Self
+        where Self: ::std::marker::Sized;
+
+    fn slerp(&self, dst: Self, t: f64) -> Self 
+        where Self: ::std::marker::Sized {
+        // cos remap
+        //self.lerp(dst, (1. - (t * ::std::f64::consts::PI).cos()) * 0.5)
+
+        // smoothstep remap
+        //self.lerp(dst, t * t * (3. - 2. * t))
+
+        // smoothstep remap v2
+        self.lerp(dst, t * t * t * (6. * t * t - 15. * t + 10.))
+    }
+}
+
+impl Lerp for f32 {
+    fn lerp(&self, dst: f32, t: f64) -> f32 {
+        self + (dst - self) * (t as f32)
+    }
+}
+
+impl Lerp for f64 {
+    fn lerp(&self, dst: f64, t: f64) -> f64 {
+        self + (dst - self) * t
+    }
+}
+
 pub struct Vec3<T> {
     pub x: T,
     pub y: T,
@@ -89,6 +118,37 @@ impl Vec3<f64> {
 
     pub fn powf(&self, f: f64) -> Self {
         Vec3::new(self.x.powf(f), self.y.powf(f), self.z.powf(f))
+    }
+
+    pub fn cartesian_to_spherical(&self) -> Vec3<f64> {
+        let r = self.len();
+        let theta = (self.z / r).acos();
+        let phi = (self.y / self.x).atan();
+        Vec3::new(r, theta, phi)
+    }
+
+    // Probably not going to use it, but might as well implement it
+    // for completeness' sake
+    pub fn spherical_to_cartesian(&self) -> Vec3<f64> {
+        let sin_th = self.y.sin();
+        let x = self.x * sin_th * self.z.cos();
+        let y = self.x * sin_th * self.z.sin();
+        let z = self.x * self.y.cos();
+        Vec3::<f64>::new(x, y, z)
+    }
+}
+
+impl Lerp for Vec3<f64> {
+    fn lerp(&self, dst: Vec3<f64>, t: f64) -> Vec3<f64> {
+        /*
+        let x = self.x + (dst.x - self.x) * t;
+        let y = self.y + (dst.y - self.z) * t;
+        let z = self.z + (dst.z - self.y) * t;
+        Vec3 {x, y, z}
+        */
+        Vec3::new(self.x.lerp(dst.x, t),
+                  self.y.lerp(dst.y, t),
+                  self.z.lerp(dst.z, t))
     }
 }
 
